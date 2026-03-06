@@ -1,0 +1,21 @@
+{
+  "name": "@mager/acp",
+  "version": "0.1.0",
+  "description": "Agent Context Protocol — a lightweight standard for agent-to-agent context passing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "example": "npx ts-node examples/basic/index.ts"
+  },
+  "keywords": ["ai", "agents", "protocol", "acp", "llm", "context"],
+  "author": "mager",
+  "license": "MIT",
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
+  }
+}
