@@ -12,6 +12,9 @@
   "keywords": ["ai", "agents", "protocol", "acp", "llm", "context"],
   "author": "mager",
   "license": "MIT",
+  "dependencies": {
+    "@mager/acp": "^0.1.0"
+  },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
     "@types/node": "^20.0.0",

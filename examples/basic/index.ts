@@ -8,7 +8,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { ACPAgent, ACPMessage } from "../../src";
+import { ACPAgent, ACPMessage } from "@mager/acp";
 
 const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
