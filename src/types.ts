@@ -1,4 +1,4 @@
-export const ACP_VERSION = "0.1.0";
+export const ACP_VERSION = "0.2.0";
 
 export interface ACPIdentity {
   agent_id: string;

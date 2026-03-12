@@ -1,4 +1,4 @@
-import { ACPMessage, ACPIntent, ACPState, ACPMemory, ACPIdentity, ACP_VERSION } from "./types";
+import { ACPMessage, ACPIntent, ACPState, ACPMemory, ACPIdentity, ACP_VERSION } from "./types.js";
 
 export function buildContext(
   identity: ACPIdentity,

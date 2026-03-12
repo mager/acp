@@ -2,30 +2,63 @@
 
 Build agent teams. Not chatbot pipelines.
 
-`@mager/acp` is a lightweight SDK for wiring multiple AI agents together — each with a clear domain, passing full context between them. Model-agnostic. Framework-agnostic. No infra required.
+`@mager/acp` is a lightweight SDK for wiring multiple AI agents together — each with a clear domain, passing full context between them. Now with a **rich TUI** for interactive agent chat.
+
+## What's New: TUI Mode 🖥️
+
+The SDK now includes a full terminal UI built with [Ink](https://github.com/vadimdemedes/ink) (React for terminals). Watch your agents think, hand off, and collaborate in real-time.
+
+```bash
+# Run the interactive TUI
+ANTHROPIC_API_KEY=your_key npx acp
+
+# Or with specific agents
+ANTHROPIC_API_KEY=your_key npx acp --agents=magerbot,genny,franklin
+```
+
+![ACP TUI Demo](https://github.com/mager/acp/raw/main/assets/tui-demo.gif)
+
+### TUI Features
+
+- **Live Agent Status** — See which agent is thinking, idle, or handing off
+- **Handoff Visualization** — Watch context pass between agents with visual indicators
+- **ACP Context Panel** — Inspect the full context envelope at any handoff (press `H`)
+- **Message Navigation** — Scroll through conversation history with arrow keys
+- **Session Management** — Reset with `Ctrl+R`, quit with `Esc`
 
 ## The Idea
 
 One agent can't do everything well. But three specialized agents that actually *talk to each other* can.
 
 ```
-user → magerbot (code/ops) → genny (health/life)
-                ↓                      ↓
-          handles infra          builds the protocol
-          flags handoff          picks up in context
+┌─────────┐     ACP Context Envelope      ┌─────────┐
+│         │ ─────────────────────────────→│         │
+│magerbot │  identity, state, memory,     │  genny  │
+│  ⚡      │  intent — nothing lost        │  🌿     │
+│         │←──────────────────────────────│         │
+└─────────┘                               └─────────┘
+   ↓                                           ↓
+code/ops                                health/life
 ```
 
 Zero re-briefing. Zero context loss. The second agent knows everything the first one did.
 
-## Install
+## Quick Start
+
+### 1. Install
 
 ```bash
 npm install @mager/acp
 ```
 
-## Build Your First Agent
+### 2. Run the TUI
 
-Extend `ACPAgent`. Override `handle()`. That's it.
+```bash
+export ANTHROPIC_API_KEY=your_key
+npx acp
+```
+
+### 3. Or use the SDK programmatically
 
 ```ts
 import { ACPAgent, ACPMessage } from "@mager/acp";
@@ -38,15 +71,15 @@ class ResearchAgent extends ACPAgent {
     super({
       id: "researcher",
       capabilities: ["search", "analyze", "summarize"],
-      systemPrompt: "You are a research agent. Be thorough and cite your reasoning.",
+      systemPrompt: "You are a research agent. Be thorough.",
     });
   }
 
   async handle(ctx: ACPMessage): Promise<string> {
-    const { intent, state } = ctx;
-    // ctx has everything: who sent it, what they want, session state, memory
+    const { intent, state, identity } = ctx;
+    // Full context available: who sent it, session state, memory
     const response = await claude.messages.create({
-      model: "claude-opus-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 500,
       system: this.systemPrompt,
       messages: [{ role: "user", content: `Research: ${intent.target}` }],
@@ -65,15 +98,15 @@ class WriterAgent extends ACPAgent {
   }
 
   async handle(ctx: ACPMessage): Promise<string> {
-    // Full context from the researcher — findings, confidence, dead ends
     const { intent, state, identity } = ctx;
+    // Writer gets FULL context from researcher
     const response = await claude.messages.create({
-      model: "claude-opus-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 400,
       messages: [{
         role: "user",
-        content: `Write a summary of: ${intent.target}
-Research findings: ${JSON.stringify(intent.payload)}
+        content: `Write a summary about "${intent.target}".
+Research: ${JSON.stringify(intent.payload)}
 Confidence: ${state.metadata?.confidence}
 Handed off by: ${identity.agent_id}`,
       }],
@@ -82,11 +115,10 @@ Handed off by: ${identity.agent_id}`,
   }
 }
 
-// Wire them up
 const writer = new WriterAgent();
 const researcher = new ResearchAgent();
 
-// researcher delegates to writer — passes ACPAgent instance directly
+// Delegate with full context
 const result = await researcher.delegate(writer, {
   action: "write_summary",
   target: "the Agent Context Protocol",
@@ -110,27 +142,65 @@ Every handoff carries four things:
 
 ```json
 {
-  "acp_version": "0.1.0",
+  "acp_version": "0.2.0",
   "identity": { "agent_id": "magerbot", "capabilities": ["code", "ops"] },
-  "state": { "session_id": "sess_abc123", "turn_count": 3, "metadata": { "confidence": 0.92 } },
+  "state": { 
+    "session_id": "sess_abc123", 
+    "turn_count": 3, 
+    "current_task": "research_complete",
+    "metadata": { "confidence": 0.92 } 
+  },
   "memory": { "retrieved": [{ "key": "user_timezone", "value": "America/Chicago" }] },
-  "intent": { "action": "plan_trip_health_protocol", "target": "japan_2026", "payload": {} }
+  "intent": { 
+    "action": "plan_trip_health_protocol", 
+    "target": "japan_2026", 
+    "payload": { "cities": ["Tokyo", "Kyoto"] }
+  }
 }
 ```
+
+## TUI Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `↑/↓` | Navigate message history |
+| `H` | Toggle ACP context panel |
+| `?` | Show/hide help |
+| `Ctrl+R` | Reset session |
+| `Esc` | Close panel / Quit |
 
 ## Real-World Example: magerbot + genny
 
 The reference implementation — two real agents that run my personal stack:
 
-- **magerbot** — code, ops, infra. Thinks in systems.
-- **genny** — health, travel, goals. Thinks in decades.
-
-When I ask magerbot to prep for a trip, it handles the logistics, then hands off to genny via ACP with everything it already knows. No re-briefing. Genny picks up mid-stride.
-
 ```bash
 git clone https://github.com/mager/acp
 cd acp && npm install
+
+# Run the TUI with the real agent team
+ANTHROPIC_API_KEY=your_key npx acp --agents=magerbot,genny
+
+# Or run the programmatic example
 ANTHROPIC_API_KEY=your_key npx ts-node examples/magerbot-genny/index.ts
+```
+
+## Programmatic TUI
+
+Build your own TUI by importing the components:
+
+```tsx
+import React from "react";
+import { render } from "ink";
+import { App, ACPAgentRunner } from "@mager/acp";
+
+const MyApp = () => {
+  const runner = new ACPAgentRunner(["researcher", "writer"]);
+  
+  return <App agents={["researcher", "writer"]} />;
+};
+
+render(<MyApp />);
 ```
 
 ## API
@@ -153,14 +223,35 @@ Build an ACP message to send to another agent.
 ### `agent.delegate(target, intent, state?, memory?)`
 Pass an `ACPAgent` instance or handler function. Builds context, calls `target.handle(ctx)` automatically.
 
-### `agent.parseContext(raw)`
-Validate + parse an incoming ACP message. Throws on invalid input.
+### `new ACPAgentRunner(agentIds: string[])`
+Create a runner that orchestrates multiple agents with real-time TUI updates.
+
+### `ACPAgentRunner.process(input, callbacks)`
+Process user input through the agent team. Callbacks receive real-time updates:
+- `onAgentStart(agentId)` — Agent started thinking
+- `onAgentHandoff(from, to, context)` — Context passed between agents
+- `onAgentComplete(agentId, response, acpContext)` — Agent finished
 
 ## Why Not MCP?
 
-- MCP is for connecting agents to **tools** (databases, APIs, functions)
-- ACP is for connecting agents to **agents** (full context, state, identity, intent)
+- **MCP** is for connecting agents to **tools** (databases, APIs, functions)
+- **ACP** is for connecting **agents to agents** (full context, state, identity, intent)
 - They're complementary — use both
+
+## Changelog
+
+### v0.2.0 — TUI Release
+- ✨ Full terminal UI with Ink/React
+- ✨ Real-time agent status visualization
+- ✨ Interactive ACP context inspector
+- ✨ Streaming Claude responses
+- ✨ CLI entry point: `npx acp`
+
+### v0.1.0 — Initial Release
+- Core ACPAgent class
+- Context envelope (identity, state, memory, intent)
+- Basic delegation pattern
+- magerbot + genny reference implementation
 
 ## Roadmap
 
@@ -168,8 +259,11 @@ Validate + parse an incoming ACP message. Throws on invalid input.
 - [x] `handle()` + `delegate()` agent pattern
 - [x] Basic two-agent example
 - [x] magerbot + genny reference implementation
-- [ ] Python port
+- [x] **TUI with Ink/React** ← You are here
+- [x] Streaming responses
+- [x] CLI entry point
 - [ ] HTTP transport helpers (call agents across services)
+- [ ] Python port
 - [ ] JSON Schema spec
 - [ ] Agent registry (discover agents by capability)
 

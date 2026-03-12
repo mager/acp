@@ -1,5 +1,5 @@
-import { ACPMessage, ACPIntent, ACPState, ACPMemory, ACPIdentity } from "./types";
-import { buildContext, validateContext } from "./context";
+import { ACPMessage, ACPIntent, ACPState, ACPMemory, ACPIdentity } from "./types.js";
+import { buildContext, validateContext } from "./context.js";
 
 function generateSessionId(): string {
   const ts = Date.now().toString(36);
